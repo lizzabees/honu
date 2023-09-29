@@ -43,6 +43,9 @@ library
                     , semirings 
     
     exposed-modules:  Regular
+                    , Regular.Expr
+                    , Regular.Parse
+
     hs-source-dirs:   src
     
 executable honu
