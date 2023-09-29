@@ -1,0 +1,56 @@
+cabal-version:   3.0
+name:            honu
+version:         0.1.0.0
+license:         NONE
+build-type:      Simple
+extra-doc-files: CHANGELOG.md
+
+common warnings
+    ghc-options: -Wall
+
+common exts
+    default-language:   GHC2021
+
+    default-extensions: DerivingVia
+                      , FunctionalDependencies
+                      , LambdaCase
+                      , OverloadedStrings
+                      , TypeFamilies
+
+common deps
+    build-depends:    base ^>=4.18.0.0
+                    , bytestring
+                    , containers
+                    , mtl
+                    , recursion-schemes
+                    , safe-exceptions
+                    , text
+                    , transformers
+                    , unordered-containers
+                    , vector
+
+common opts
+    ghc-options: -haddock
+    
+library
+    import:           deps
+                    , exts
+                    , opts
+                    , warnings
+
+    build-depends:    charset
+                    , megaparsec
+                    , semirings 
+    
+    exposed-modules:  Regular
+    hs-source-dirs:   src
+    
+executable honu
+    import:           deps
+                    , exts
+                    , opts
+                    , warnings
+    main-is:          Main.hs
+    build-depends:    honu
+
+    hs-source-dirs:   app
