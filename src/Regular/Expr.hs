@@ -5,6 +5,7 @@ module Regular.Expr
   , Bound(..)
   , Cnj(..)
   , conjunction
+  , nullable
   , simplify
   ) where
 
@@ -13,7 +14,7 @@ import Prelude hiding (negate, product, sum)
 import Data.Functor.Foldable
 import Data.Functor.Foldable.TH
 import Data.CharSet (CharSet)
-import Data.Semiring
+import Data.Semiring hiding ((+), (-), (*))
 import Data.Star
 
 data Expr
@@ -102,12 +103,68 @@ data Bound
 
 makeBaseFunctor ''Expr
 
+
+unbound :: ExprF Expr -> ExprF Expr
+unbound = project . \case
+  (BndF e (AtLeast   n)) -> atLeast e n
+  (BndF e (AtMost    n)) -> atMost  e n
+  (BndF e (Between l h)) -> between e l h
+  (BndF e (Exactly   n)) -> exactly e n 
+  e                      -> embed   e
+  where
+    atLeast :: Expr -> Int -> Expr
+    atLeast e 0 = Cls e
+    atLeast e n = Cat . reverse . (Cls e :) $ replicate n e
+    
+    atMost :: Expr -> Int -> Expr
+    atMost _ 0 = Eps
+    atMost e 1 = Alt [e, Eps]
+    atMost e n = Cat . replicate n $ Alt [e, Eps]
+    
+    exactly :: Expr -> Int -> Expr
+    exactly _ 0 = Eps
+    exactly e 1 = e
+    exactly e n = Cat $ replicate n e
+    
+    between :: Expr -> Int -> Int -> Expr
+    between _ 0 0 = Eps
+    between e 1 1 = e
+    between e l h = Cat [exactly e l, atMost e (h - l)]
+
+kleene :: ExprF Expr -> Expr
+kleene (AltF es) = sum         es
+kleene (AndF es) = conjunction es
+kleene (CatF es) = product     es
+kleene (CmpF e ) = negate      e
+kleene (ClsF e ) = star        e
+kleene e         = embed       e
+
+passes :: ExprF Expr -> Expr
+passes = kleene . unbound
+
 simplify :: Expr -> Expr
-simplify = cata go
-  where go :: ExprF Expr -> Expr
-        go (AltF es) = sum         es
-        go (AndF es) = conjunction es
-        go (CatF es) = product     es
-        go (CmpF e ) = negate      e
-        go (ClsF e ) = star        e
-        go e         = embed       e
+simplify = cata passes
+
+nullable :: Expr -> Bool
+nullable = cata nullable'
+
+nullable' :: ExprF Bool -> Bool
+nullable'  EpsF     = True
+nullable'  NulF     = False
+nullable'  AnyF     = False
+nullable' (OneF  _) = False
+nullable' (SetF  _) = False
+
+nullable' (AltF es) = sum     es
+nullable' (AndF es) = product es
+nullable' (CatF es) = product es
+nullable' (ClsF e ) = star    e
+nullable' (CmpF e ) = not     e
+
+nullable' (BndF _ (AtLeast   0)) = True
+nullable' (BndF e (AtLeast   _)) = e
+nullable' (BndF _ (AtMost    _)) = True
+nullable' (BndF _ (Between 0 _)) = True
+nullable' (BndF e (Between _ _)) = e
+nullable' (BndF _ (Exactly   0)) = True
+nullable' (BndF e (Exactly   _)) = e

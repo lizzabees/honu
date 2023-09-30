@@ -86,7 +86,7 @@ quant e = option e $ oneOf @[] "*+?{" >>= \case
 expr :: Parser Expr
 expr = (Eps <$ eof) <|> alts
   where meta :: [Char]
-        meta  = "|&!*+?.\\(){}[]"
+        meta  = "|&!*+?.\\(){}[]ε∅"
 
         onec :: Parser Char
         onec  = noneOf meta
@@ -96,12 +96,18 @@ expr = (Eps <$ eof) <|> alts
 
         anyc :: Parser Expr
         anyc  = Any <$ char '.'
+        
+        epsc :: Parser Expr
+        epsc  = Eps <$ char 'ε'
+
+        nulc :: Parser Expr
+        nulc  = Nul <$ char '∅'
 
         nest :: Parser Expr
         nest  = between (char '(') (char ')') expr
 
         atom :: Parser Expr
-        atom  = choice [litc, anyc, cset, nest] >>= quant
+        atom  = choice [litc, anyc, epsc, nulc, cset, nest] >>= quant
 
         cmpl :: Parser Expr
         cmpl  = do
