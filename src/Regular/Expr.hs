@@ -4,9 +4,12 @@ module Regular.Expr
   , ExprF(..)
   , Bound(..)
   , Cnj(..)
+  , Pass
   , conjunction
+  , kleene
   , nullable
   , simplify
+  , unbound
   ) where
 
 import Prelude hiding (negate, product, sum)
@@ -14,6 +17,8 @@ import Prelude hiding (negate, product, sum)
 import Data.Functor.Foldable
 import Data.Functor.Foldable.TH
 import Data.CharSet (CharSet)
+import Data.CharSet qualified as CharSet
+import Data.List (foldl')
 import Data.Semiring hiding ((+), (-), (*))
 import Data.Star
 
@@ -32,13 +37,18 @@ data Expr
   deriving(Eq, Ord, Show)
 
 instance Semiring Expr where
-  zero            = Nul
-  one             = Eps
+  zero = Nul
+  one  = Eps
 
   plus Any   _ = Any
   plus _   Any = Any
   plus Nul   r = r
   plus l   Nul = l
+
+  plus (Set l) (Set r) = Set $ CharSet.union  l r
+  plus (Set l) (One r) = Set $ CharSet.insert r l
+  plus (One l) (Set r) = Set $ CharSet.insert l r
+  plus (One l) (One r) = Set $ CharSet.fromList [l,r]
 
   plus (Alt l) (Alt r) = Alt $ l ++ r
   plus (Alt l)  r      = Alt $ l ++ [r]
@@ -76,8 +86,6 @@ instance Semiring Cnj where
 
   times (Cnj Nul)        _  = Cnj Nul
   times  _        (Cnj Nul) = Cnj Nul
-  times (Cnj Any)  r        = r
-  times  l        (Cnj Any) = l
   times (Cnj Eps)        r  = r
   times  l        (Cnj Eps) = l
 
@@ -103,14 +111,16 @@ data Bound
 
 makeBaseFunctor ''Expr
 
+type Pass = ExprF Expr -> ExprF Expr
 
-unbound :: ExprF Expr -> ExprF Expr
+unbound :: Pass
 unbound = project . \case
   (BndF e (AtLeast   n)) -> atLeast e n
   (BndF e (AtMost    n)) -> atMost  e n
   (BndF e (Between l h)) -> between e l h
   (BndF e (Exactly   n)) -> exactly e n 
   e                      -> embed   e
+
   where
     atLeast :: Expr -> Int -> Expr
     atLeast e 0 = Cls e
@@ -131,19 +141,17 @@ unbound = project . \case
     between e 1 1 = e
     between e l h = Cat [exactly e l, atMost e (h - l)]
 
-kleene :: ExprF Expr -> Expr
-kleene (AltF es) = sum         es
-kleene (AndF es) = conjunction es
-kleene (CatF es) = product     es
-kleene (CmpF e ) = negate      e
-kleene (ClsF e ) = star        e
-kleene e         = embed       e
+kleene :: Pass
+kleene = project . \case
+  AltF es -> sum         es
+  AndF es -> conjunction es
+  CatF es -> product     es
+  CmpF e  -> negate      e
+  ClsF e  -> star        e
+  e       -> embed       e
 
-passes :: ExprF Expr -> Expr
-passes = kleene . unbound
-
-simplify :: Expr -> Expr
-simplify = cata passes
+simplify :: [Pass] -> Expr -> Expr
+simplify = cata . foldl' (.) embed
 
 nullable :: Expr -> Bool
 nullable = cata nullable'

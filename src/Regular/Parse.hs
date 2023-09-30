@@ -1,5 +1,9 @@
 module Regular.Parse
-  ( Parser, parser, expr
+  ( Parser
+  , ParseError
+  , expr
+  , parse
+  , regex
   ) where
 
 import Control.Monad (void)
@@ -8,7 +12,8 @@ import Data.CharSet (CharSet)
 import Data.CharSet qualified as CharSet
 import Data.Text (Text)
 import Data.Void (Void)
-import Text.Megaparsec
+import Text.Megaparsec hiding (parse)
+import Text.Megaparsec qualified as Parsec
 import Text.Megaparsec.Char (char)
 import Text.Megaparsec.Char.Lexer (decimal)
 
@@ -16,11 +21,14 @@ import Regular.Expr (Bound(..), Expr(..))
 
 type Parser = Parsec Void Text
 
-parser :: Parser Expr
-parser = expr <* eof
+parse :: String -> Text -> Either (ParseErrorBundle Text Void) Expr
+parse = Parsec.parse regex
+
+regex :: Parser Expr
+regex = expr <* eof
 
 escc :: Parser Char
-escc  = char '\\' *> anySingle
+escc = char '\\' *> anySingle
         
 cset :: Parser Expr
 cset  = do
@@ -29,23 +37,23 @@ cset  = do
   items <- many item
   void $ char ']'
   return $ case items of
-    []  -> if neg then Any else Nul
-    [s] -> if neg then And [Cmp $ Set s, Any] else Set s
+    []  -> if neg then Any         else Nul
+    [s] -> if neg then Cmp $ Set s else Set s
     xs  -> let cs = Set $ foldr CharSet.union CharSet.empty xs
-           in if neg then And [Cmp cs, Any] else cs
+           in if neg then Cmp cs else cs
 
   where 
     regc :: Parser Char
-    regc  = satisfy $ \case
+    regc = satisfy $ \case
       '-' -> False
       ']' -> False
       _   -> True
 
     setc :: Parser Char
-    setc  = regc <|> escc
+    setc = regc <|> escc
 
     item :: Parser CharSet
-    item  = do
+    item = do
       lo <- setc
       hi <- optional $ char '-' *> setc
       case hi of
@@ -86,40 +94,40 @@ quant e = option e $ oneOf @[] "*+?{" >>= \case
 expr :: Parser Expr
 expr = (Eps <$ eof) <|> alts
   where meta :: [Char]
-        meta  = "|&!*+?.\\(){}[]ε∅"
+        meta = "|&!*+?.\\(){}[]ε∅"
 
         onec :: Parser Char
-        onec  = noneOf meta
+        onec = noneOf meta
 
         litc :: Parser Expr
-        litc  = One <$> (onec <|> escc)
+        litc = One <$> (onec <|> escc)
 
         anyc :: Parser Expr
-        anyc  = Any <$ char '.'
+        anyc = Any <$ char '.'
         
         epsc :: Parser Expr
-        epsc  = Eps <$ char 'ε'
+        epsc = Eps <$ char 'ε'
 
         nulc :: Parser Expr
-        nulc  = Nul <$ char '∅'
+        nulc = Nul <$ char '∅'
 
         nest :: Parser Expr
-        nest  = between (char '(') (char ')') expr
+        nest = between (char '(') (char ')') expr
 
         atom :: Parser Expr
-        atom  = choice [litc, anyc, epsc, nulc, cset, nest] >>= quant
+        atom = choice [litc, anyc, epsc, nulc, cset, nest] >>= quant
 
         cmpl :: Parser Expr
-        cmpl  = do
+        cmpl = do
           cmp <- option False $ char '!' $> True
           atm <- atom
           if cmp then return $ Cmp atm else return atm
 
         cats :: Parser Expr
-        cats  = manyOr Cat $ many cmpl
+        cats = manyOr Cat $ many cmpl
 
         ands :: Parser Expr
-        ands  = manyOr And $ sepBy cats (char '&')
+        ands = manyOr And $ sepBy cats (char '&')
 
         alts :: Parser Expr
-        alts  = manyOr Alt $ sepBy ands (char '|')
+        alts = manyOr Alt $ sepBy ands (char '|')

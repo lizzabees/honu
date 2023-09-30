@@ -1,7 +1,8 @@
-module Regular 
-  ( Bound(..), Cnj(..), Expr(..), nullable, simplify
-  , Parser, expr, parser
+{-# OPTIONS_GHC -Wno-unused-imports #-}
+module Regular
+  ( module Regular.Expr
+  , module Regular.Parse
   ) where
 
-import Regular.Expr  (Bound(..), Cnj(..), Expr(..), nullable, simplify)
-import Regular.Parse (Parser, expr, parser)
+import Regular.Expr  (Expr)
+import Regular.Parse (parse)

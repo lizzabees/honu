@@ -11,10 +11,13 @@ common warnings
 common exts
     default-language:   GHC2021
 
-    default-extensions: DerivingVia
+    default-extensions: ApplicativeDo
+                      , DerivingVia
                       , FunctionalDependencies
                       , LambdaCase
+                      , NamedFieldPuns
                       , OverloadedStrings
+                      , RecordWildCards
                       , TypeFamilies
 
 common deps
@@ -53,7 +56,12 @@ executable honu
                     , exts
                     , opts
                     , warnings
-    main-is:          Main.hs
+
     build-depends:    honu
+                    , megaparsec
+                    , optparse-applicative
+
+    main-is:          Main.hs
+    other-modules:    Config
 
     hs-source-dirs:   app
