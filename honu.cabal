@@ -12,6 +12,7 @@ common exts
     default-language:   GHC2021
 
     default-extensions: ApplicativeDo
+                      , DataKinds
                       , DerivingVia
                       , FunctionalDependencies
                       , LambdaCase
@@ -46,8 +47,10 @@ library
                     , semirings 
     
     exposed-modules:  Regular
+                    , Regular.Dotty
                     , Regular.Expr
                     , Regular.Parse
+                    , Regular.Pretty
 
     hs-source-dirs:   src
     

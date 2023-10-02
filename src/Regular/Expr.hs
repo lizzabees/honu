@@ -27,6 +27,7 @@ data Expr
   | Nul
   | Any
   | One Char
+  | Str String
   | Set CharSet
   | Alt [Expr]
   | And [Expr]
@@ -59,9 +60,16 @@ instance Semiring Expr where
   times  _       Nul    = Nul
   times  Eps     r      = r
   times  l       Eps    = l
+
+  times (Str l) (Str r) = Str $ l ++ r
+  times (Str l) (One r) = Str $ l ++ [r]
+  times (One l) (Str r) = Str $ l:r
+  times (One l) (One r) = Str $ [l,r]
+
   times (Cat l) (Cat r) = Cat $ l ++ r
   times (Cat l)      r  = Cat $ l ++ [r]
   times  l      (Cat r) = Cat $ l:r
+
   times  l           r  = Cat [l,r]
 
 instance Ring Expr where
@@ -161,6 +169,7 @@ nullable'  EpsF     = True
 nullable'  NulF     = False
 nullable'  AnyF     = False
 nullable' (OneF  _) = False
+nullable' (StrF  _) = False
 nullable' (SetF  _) = False
 
 nullable' (AltF es) = sum     es

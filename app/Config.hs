@@ -1,4 +1,8 @@
-module Config where
+module Config
+  ( Config(..)
+  , Output(..)
+  , config
+  ) where
 
 import Data.Text (Text)
 import Data.List (foldl')
@@ -6,9 +10,18 @@ import Options.Applicative
 
 import Regular.Expr (Pass, kleene, unbound)
 
+data Output = Dot | Show
+  deriving (Eq,Ord,Show)
+
+outputType :: String -> Either String Output
+outputType "dot"  = Right Dot
+outputType "show" = Right Show
+outputType s      = Left $ "invalid output type '" <> s <> "'"
+
 data Config = Config
   { cfgPasses   :: [Pass]
   , cfgSimplify :: Bool
+  , cfgOutput   :: Output
   , cfgExpr     :: Text
   }
 
@@ -26,6 +39,7 @@ config = do
     , long  "no-simplify"
     , help  "disable post-parsing AST simplification"
     ]
+
   cfgPasses <- option (eitherReader passes) $ mconcat
     [ short 'p'
     , long "passes"
@@ -34,8 +48,19 @@ config = do
     , metavar "PASS..."
     , value [unbound, kleene]
     ]
+
+  cfgOutput <- option (eitherReader outputType) $ mconcat
+    [ short 'o'
+    , long "output"
+    , help "format to output ast. dot: graphviz dot, show: show instance"
+    , showDefault
+    , metavar "OUTPUT"
+    , value Show
+    ]
+
   cfgExpr <- argument str $ mconcat 
     [ metavar "REGEX"
     , help "regex to parse"
     ]
+
   pure Config {..}
