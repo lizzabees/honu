@@ -73,15 +73,15 @@ runDotty (Dotty f) =
       let outId   (NodeId x) = "  node" <> showLTB x
       let outName            = LTB.fromLazyText 
 
-      writeLn $ "digraph G {"
-      writeLn $ "  node [ shape = Mrecord ];"
-      writeLn $ "  edge [ dir   = none    ];"
+      writeLn   "digraph G {"
+      writeLn   "  node [ shape = Mrecord ];"
+      writeLn   "  edge [ dir   = none    ];"
       writeLn $ "  root         = node" <> showLTB root <> ";"
       for_ nodes $ \case
         (nid, Leaf n  ) -> do
           writeLn $ mconcat [outId nid, " [ label = <{", outName n, "}> ];"]
         (nid, Item n x) -> do
-          writeLn $ mconcat [outId nid, " [ label = <{", outName n, "}|{", showLTB x, "}> ];"]
+          writeLn $ mconcat [outId nid, " [ label = <{", outName n, "}|{", LTB.fromLazyText x, "}> ];"]
         (nid, Solo n k) -> do
           writeLn $ mconcat [outId nid, " [ label = <{", outName n, "}|{1}> ];"]
           writeLn $ mconcat [outId nid, " -> ", outId k, ";"]

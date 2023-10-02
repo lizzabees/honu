@@ -33,10 +33,10 @@ prettySet :: Int -> Int -> CharSet -> String
 prettySet minRng maxElems set =
   let
     subs = setElems $ CharSet.toAscList set
-    toStr (Range lo hi) | (ord hi - ord lo) > minRng = [lo,'-',hi]
-    toStr (Range lo hi)                    = [lo ..  hi]
-    toStr (Lone      c)                    = [c]
-  in case splitAt maxElems subs of
+    toStr (Range lo hi) | (ord hi - ord lo) >= minRng = [lo,'-',hi]
+    toStr (Range lo hi) = [lo ..  hi]
+    toStr (Lone      c) = [c]
+  in case splitAt (maxElems - 1) subs of
     (cs, []) -> mconcat ["[", concatMap toStr cs,"]"]
     (cs,  _) -> mconcat ["[", concatMap toStr cs, "...]"]
 

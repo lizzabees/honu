@@ -64,7 +64,7 @@ instance Semiring Expr where
   times (Str l) (Str r) = Str $ l ++ r
   times (Str l) (One r) = Str $ l ++ [r]
   times (One l) (Str r) = Str $ l:r
-  times (One l) (One r) = Str $ [l,r]
+  times (One l) (One r) = Str   [l,r]
 
   times (Cat l) (Cat r) = Cat $ l ++ r
   times (Cat l)      r  = Cat $ l ++ [r]
